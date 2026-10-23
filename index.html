@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvoicePro - Invoicing & Revenue Management</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- App Stylesheets -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/print.css" />
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- ==================== SIDEBAR NAVIGATION ==================== -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon">
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+          </div>
+          <div class="logo-text">Invoice<span>Pro</span></div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Main Menu</div>
+        <a class="nav-item active" data-view="dashboard" onclick="App.navigate('dashboard')">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" data-view="invoices" onclick="App.navigate('invoices')">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Invoices</span>
+        </a>
+        <a class="nav-item" data-view="customers" onclick="App.navigate('customers')">
+          <i class="fa-solid fa-users"></i>
+          <span>Customers</span>
+        </a>
+        <a class="nav-item" data-view="products" onclick="App.navigate('products')">
+          <i class="fa-solid fa-boxes-stacked"></i>
+          <span>Products / Services</span>
+        </a>
+
+        <div class="nav-label">Configuration</div>
+        <a class="nav-item" data-view="settings" onclick="App.navigate('settings')">
+          <i class="fa-solid fa-sliders"></i>
+          <span>Business & Bank</span>
+        </a>
+        <a class="nav-item" onclick="App.openFirebaseModal()">
+          <i class="fa-solid fa-fire"></i>
+          <span>Firebase Database</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="db-status-card" onclick="App.openFirebaseModal()" title="Click to view or edit Firebase Database settings">
+          <div class="db-status-info">
+            <div id="db-status-dot" class="status-dot local"></div>
+            <div>
+              <div id="db-status-title" class="db-title">Local Mode</div>
+              <div id="db-status-sub" class="db-subtitle">Synced locally</div>
+            </div>
+          </div>
+          <i class="fa-solid fa-gear" style="color: #64748b; font-size: 0.85rem;"></i>
+        </div>
+
+        <!-- Realtime Bandwidth Shield & Quota Indicator -->
+        <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md);" title="Tracks daily Firebase Spark limit (360 MB/day)">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: #94a3b8; margin-bottom: 0.35rem;">
+            <span><i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Quota Shield</span>
+            <span id="bandwidth-usage-text">0.01 MB / 360 MB</span>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.1); height: 4px; border-radius: 999px; overflow: hidden;">
+            <div id="bandwidth-progress-bar" style="background: #10b981; height: 100%; width: 0.1%; transition: width 0.3s;"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+    <div class="main-wrapper">
+
+      <!-- TOP HEADER NAVBAR -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-menu-btn" onclick="App.toggleMobileSidebar()" aria-label="Toggle Navigation">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="page-title-box">
+            <h2 id="header-view-title">Dashboard & Revenue Overview</h2>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <button class="btn btn-secondary btn-sm" onclick="App.openFirebaseModal()" title="Configure Firebase Realtime Database">
+            <i class="fa-solid fa-cloud"></i>
+            <span>Firebase</span>
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="Invoices.openBuilder()">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Invoice</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENT SECTIONS -->
+      <main class="content-area">
+
+        <!-- ==================== 1. DASHBOARD VIEW ==================== -->
+        <section id="view-dashboard" class="view-section active">
+          
+          <!-- KPI Metrics Row -->
+          <div class="kpi-grid">
+            <div class="kpi-card revenue">
+              <div class="kpi-info">
+                <span class="kpi-label">Total Revenue (Collected)</span>
+                <span id="kpi-total-revenue" class="kpi-value">$0.00</span>
+                <span class="kpi-meta"><i class="fa-solid fa-arrow-trend-up" style="color: #10b981;"></i> Received payments</span>
+              </div>
+              <div class="kpi-icon">
+                <i class="fa-solid fa-wallet"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card unpaid">
+              <div class="kpi-info">
+                <span class="kpi-label">Outstanding / Unpaid</span>
+                <span id="kpi-total-unpaid" class="kpi-value">$0.00</span>
+                <span id="kpi-unpaid-meta" class="kpi-meta">Pending receivables</span>
+              </div>
+              <div class="kpi-icon">
+                <i class="fa-solid fa-clock"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card partial">
+              <div class="kpi-info">
+                <span class="kpi-label">Partially Paid Balance</span>
+                <span id="kpi-total-partial" class="kpi-value">$0.00</span>
+                <span class="kpi-meta">Remaining instalments</span>
+              </div>
+              <div class="kpi-icon">
+                <i class="fa-solid fa-scale-balanced"></i>
+              </div>
+            </div>
+
+            <div class="kpi-card revenue">
+              <div class="kpi-info">
+                <span class="kpi-label">Total Invoiced</span>
+                <span id="kpi-total-invoiced" class="kpi-value">$0.00</span>
+                <span class="kpi-meta">Cumulative invoice volume</span>
+              </div>
+              <div class="kpi-icon">
+                <i class="fa-solid fa-file-invoice"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts and Distribution Grid -->
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="card-header">
+                <h3>Monthly Revenue Trend</h3>
+                <span style="font-size: 0.8rem; color: #64748b;">Last 6 Months</span>
+              </div>
+              <div class="chart-container">
+                <div id="dashboard-monthly-chart" class="chart-bars-wrap">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>Status Distribution</h3>
+              </div>
+              <div id="dashboard-status-distribution" class="distribution-list">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Invoices Card -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Recent Invoices</h3>
+              <button class="btn btn-secondary btn-sm" onclick="App.navigate('invoices')">
+                View All Invoices <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Due Date</th>
+                    <th>Grand Total</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-recent-invoices">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ==================== 2. INVOICES VIEW ==================== -->
+        <section id="view-invoices" class="view-section">
+          
+          <!-- Filter Tabs -->
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all" onclick="Invoices.setFilter('all')">
+              All Invoices <span id="count-filter-all" class="tab-count">0</span>
+            </button>
+            <button class="filter-tab" data-filter="unpaid" onclick="Invoices.setFilter('unpaid')">
+              Unpaid <span id="count-filter-unpaid" class="tab-count">0</span>
+            </button>
+            <button class="filter-tab" data-filter="partial" onclick="Invoices.setFilter('partial')">
+              Partially Paid <span id="count-filter-partial" class="tab-count">0</span>
+            </button>
+            <button class="filter-tab" data-filter="paid" onclick="Invoices.setFilter('paid')">
+              Paid <span id="count-filter-paid" class="tab-count">0</span>
+            </button>
+            <button class="filter-tab" data-filter="overdue" onclick="Invoices.setFilter('overdue')">
+              Overdue <span id="count-filter-overdue" class="tab-count">0</span>
+            </button>
+            <button class="filter-tab" data-filter="draft" onclick="Invoices.setFilter('draft')">
+              Drafts <span id="count-filter-draft" class="tab-count">0</span>
+            </button>
+          </div>
+
+          <!-- Search & Action Toolbar -->
+          <div class="search-action-bar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="search-input" placeholder="Search by invoice #, customer name, company..." oninput="Invoices.setSearch(this.value)" />
+            </div>
+            <button class="btn btn-primary" onclick="Invoices.openBuilder()">
+              <i class="fa-solid fa-plus"></i>
+              <span>Create New Invoice</span>
+            </button>
+          </div>
+
+          <!-- Invoices Data Table -->
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Customer</th>
+                  <th>Issue Date</th>
+                  <th>Due Date</th>
+                  <th>Total</th>
+                  <th>Balance Due</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="invoices-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+        </section>
+
+        <!-- ==================== 3. CUSTOMERS VIEW ==================== -->
+        <section id="view-customers" class="view-section">
+          <div class="search-action-bar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="search-input" placeholder="Search customers by name, company, email, phone..." oninput="Customers.setSearch(this.value)" />
+            </div>
+            <button class="btn btn-primary" onclick="Customers.openModal()">
+              <i class="fa-solid fa-user-plus"></i>
+              <span>Add Customer</span>
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer Name</th>
+                  <th>Company</th>
+                  <th>Email</th>
+                  <th>Phone / WhatsApp</th>
+                  <th>Total Invoiced</th>
+                  <th>Outstanding Balance</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== 4. PRODUCTS VIEW ==================== -->
+        <section id="view-products" class="view-section">
+          <div class="search-action-bar">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" class="search-input" placeholder="Search products or services by name, SKU..." oninput="Products.setSearch(this.value)" />
+            </div>
+            <button class="btn btn-primary" onclick="Products.openModal()">
+              <i class="fa-solid fa-plus"></i>
+              <span>Add Product / Service</span>
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Item / Service</th>
+                  <th>SKU / Code</th>
+                  <th>Unit</th>
+                  <th>Unit Price</th>
+                  <th>Default Tax</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="products-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ==================== 5. BUSINESS & BANK SETTINGS ==================== -->
+        <section id="view-settings" class="view-section">
+          <form id="form-business-settings" onsubmit="App.saveBusinessSettings(event)">
+            
+            <div class="card">
+              <div class="card-header">
+                <h3>Business Information</h3>
+                <button type="submit" class="btn btn-primary btn-sm">
+                  <i class="fa-solid fa-floppy-disk"></i> Save Changes
+                </button>
+              </div>
+
+              <div class="form-row" style="margin-bottom: 1.5rem;">
+                <div>
+                  <label class="form-label">Company Logo</label>
+                  <div style="display: flex; align-items: center; gap: 1.25rem;">
+                    <img id="biz-logo-preview" src="" alt="Logo" style="max-height: 60px; max-width: 140px; border-radius: 6px; border: 1px solid var(--border-color); display: none; object-fit: contain; padding: 4px;" />
+                    <input type="file" id="biz-logo-input" accept="image/*" class="form-control" onchange="App.handleLogoUpload(this)" style="max-width: 320px;" />
+                  </div>
+                  <small style="color: #94a3b8; display: block; margin-top: 0.35rem;">Recommended: PNG or JPG with transparent background (under 2MB)</small>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Business Name <span class="req">*</span></label>
+                  <input type="text" id="biz-name" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tagline / Motto</label>
+                  <input type="text" id="biz-tagline" class="form-control" />
+                </div>
+              </div>
+
+              <div class="form-row-3">
+                <div class="form-group">
+                  <label class="form-label">Email Address</label>
+                  <input type="email" id="biz-email" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone Number</label>
+                  <input type="text" id="biz-phone" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tax ID / VAT / GST Number</label>
+                  <input type="text" id="biz-tax-id" class="form-control" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Currency Symbol</label>
+                  <input type="text" id="biz-currency-symbol" class="form-control" placeholder="$ or Rs or €" style="max-width: 120px;" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Currency Code</label>
+                  <input type="text" id="biz-currency" class="form-control" placeholder="USD, EUR, GBP, PKR" style="max-width: 150px;" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Physical Address</label>
+                <textarea id="biz-address" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+
+            <!-- Bank & Wire Transfer Details -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Bank & Payment Details (Printed on Invoices)</h3>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Bank Name</label>
+                  <input type="text" id="biz-bank-name" class="form-control" placeholder="e.g. Chase Bank, Barclays, HBL" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Account Title</label>
+                  <input type="text" id="biz-account-title" class="form-control" placeholder="Account beneficiary title" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Account Number / IBAN</label>
+                  <input type="text" id="biz-account-number" class="form-control" placeholder="Bank account or IBAN" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Routing / SWIFT / IFSC Code</label>
+                  <input type="text" id="biz-swift" class="form-control" placeholder="SWIFT or Routing code" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Wire / Payment Instructions / UPI Info</label>
+                <input type="text" id="biz-bank-notes" class="form-control" placeholder="e.g. Please send payment reference with Invoice #" />
+              </div>
+            </div>
+
+            <!-- Invoice Numbering & Defaults -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Invoice Numbering & Default Terms</h3>
+              </div>
+              <div class="form-row-3">
+                <div class="form-group">
+                  <label class="form-label">Invoice Prefix</label>
+                  <input type="text" id="biz-inv-prefix" class="form-control" placeholder="INV-" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Next Invoice Sequence #</label>
+                  <input type="number" id="biz-inv-next" class="form-control" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Default Payment Due Days</label>
+                  <input type="number" id="biz-inv-due-days" class="form-control" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Default Notes (Shown on Invoices)</label>
+                <textarea id="biz-inv-notes" class="form-control" rows="2"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Default Terms & Conditions</label>
+                <textarea id="biz-inv-terms" class="form-control" rows="2"></textarea>
+              </div>
+
+              <div style="text-align: right; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                </button>
+              </div>
+            </div>
+
+            <!-- Backup & Export -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Data Backup & Sovereignty</h3>
+              </div>
+              <p style="margin-bottom: 1.25rem;">Download a full JSON backup of all your invoices, customers, and products, or restore from a previous backup file.</p>
+              <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" onclick="App.exportBackupJSON()">
+                  <i class="fa-solid fa-download"></i> Export Full JSON Backup
+                </button>
+                <label class="btn btn-secondary" style="margin: 0; cursor: pointer;">
+                  <i class="fa-solid fa-upload"></i> Restore from JSON
+                  <input type="file" accept=".json" style="display: none;" onchange="App.importBackupJSON(this)" />
+                </label>
+              </div>
+            </div>
+
+          </form>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. INVOICE BUILDER MODAL -->
+  <div id="modal-invoice-builder" class="modal-overlay">
+    <div class="modal-container modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-invoice-builder-title">Create New Invoice</h3>
+        <button class="modal-close" onclick="App.closeModal('modal-invoice-builder')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-invoice-builder" onsubmit="event.preventDefault();">
+          <input type="hidden" id="inv-builder-id" value="" />
+
+          <!-- Invoice Header Grid -->
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Invoice Number <span class="req">*</span></label>
+              <input type="text" id="inv-number" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Issue Date <span class="req">*</span></label>
+              <input type="date" id="inv-issue-date" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Due Date <span class="req">*</span></label>
+              <input type="date" id="inv-due-date" class="form-control" required />
+            </div>
+          </div>
+
+          <!-- Customer Selection Grid -->
+          <div class="card" style="padding: 1rem; margin-bottom: 1.25rem; background: #f8fafc;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <strong style="font-size: 0.9rem;">Customer Information</strong>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="Customers.openModal()" title="Add a customer directly">
+                <i class="fa-solid fa-plus"></i> Quick Add Customer
+              </button>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <select id="inv-customer-select" class="form-control" onchange="Invoices.onCustomerSelected(this.value)">
+                <!-- Customers populated dynamically -->
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label class="form-label">Customer Name <span class="req">*</span></label>
+                <input type="text" id="inv-customer-name" class="form-control" placeholder="Recipient or business name" required />
+              </div>
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label class="form-label">Customer Email</label>
+                <input type="email" id="inv-customer-email" class="form-control" placeholder="client@example.com" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">WhatsApp / Phone Number</label>
+                <input type="text" id="inv-customer-phone" class="form-control" placeholder="+1234567890 (include country code for WhatsApp)" />
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Billing Address</label>
+                <input type="text" id="inv-customer-address" class="form-control" placeholder="Full street address" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Line Items Table -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong style="font-size: 0.95rem;">Line Items</strong>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="Invoices.addLineItemRow()">
+              <i class="fa-solid fa-plus"></i> Add Item Row
+            </button>
+          </div>
+
+          <div class="items-table-wrap">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item & Description</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Tax (%)</th>
+                  <th style="text-align: right;">Line Total</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="inv-items-table-body">
+                <!-- Line item rows dynamically rendered -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Calculations Summary -->
+          <div class="calc-summary-grid">
+            <div>
+              <div class="form-group">
+                <label class="form-label">Notes & Comments</label>
+                <textarea id="inv-notes" class="form-control" placeholder="Visible to customer on invoice"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Terms & Conditions</label>
+                <textarea id="inv-terms" class="form-control" placeholder="Payment terms or instructions"></textarea>
+              </div>
+            </div>
+
+            <div class="calc-box">
+              <div class="calc-row">
+                <span>Subtotal</span>
+                <strong id="inv-summary-subtotal">$0.00</strong>
+              </div>
+
+              <div class="calc-row">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span>Discount:</span>
+                  <select id="inv-discount-type" class="form-control" style="width: 75px; padding: 0.2rem 0.4rem; font-size: 0.75rem;" onchange="Invoices.recalculateTotals()">
+                    <option value="percentage">%</option>
+                    <option value="fixed">Fixed</option>
+                  </select>
+                  <input type="number" id="inv-discount-value" min="0" step="any" value="0" class="form-control" style="width: 80px; padding: 0.2rem 0.4rem; font-size: 0.8rem;" oninput="Invoices.recalculateTotals()" />
+                </div>
+                <strong id="inv-summary-discount" style="color: #ef4444;">-$0.00</strong>
+              </div>
+
+              <div class="calc-row">
+                <span>Tax Total</span>
+                <strong id="inv-summary-tax">$0.00</strong>
+              </div>
+
+              <div class="calc-row">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <span>Shipping / Extra:</span>
+                  <input type="number" id="inv-shipping-fee" min="0" step="0.01" value="0" class="form-control" style="width: 90px; padding: 0.2rem 0.4rem; font-size: 0.8rem;" oninput="Invoices.recalculateTotals()" />
+                </div>
+                <strong id="inv-summary-shipping">$0.00</strong>
+              </div>
+
+              <div class="calc-row total-row">
+                <span>Grand Total</span>
+                <span id="inv-summary-grandtotal">$0.00</span>
+              </div>
+            </div>
+          </div>
+
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-invoice-builder')">Cancel</button>
+        <button type="button" class="btn btn-secondary" onclick="Invoices.saveInvoice(true)">Save as Draft</button>
+        <button type="button" class="btn btn-primary" onclick="Invoices.saveInvoice(false)">
+          <i class="fa-solid fa-check"></i> Save & Finalize
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. INVOICE VIEW MODAL -->
+  <div id="modal-invoice-view" class="modal-overlay">
+    <div class="modal-container modal-lg">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <h3 style="margin: 0;">Invoice Preview</h3>
+          <span style="font-size: 0.8rem; color: #64748b;">(A4 Standard Layout)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button id="btn-modal-view-pdf" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-file-pdf"></i> Download PDF
+          </button>
+          <button id="btn-modal-view-print" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
+          <button id="btn-modal-view-wa" class="btn btn-whatsapp btn-sm">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+          </button>
+          <button id="btn-modal-view-pay" class="btn btn-success btn-sm">
+            <i class="fa-solid fa-money-bill-wave"></i> Record Payment
+          </button>
+          <button class="modal-close" onclick="App.closeModal('modal-invoice-view')">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body" style="background: #e2e8f0; padding: 1.5rem;">
+        
+        <!-- Rendered Printable Invoice DOM inside View Modal -->
+        <div id="printable-invoice" style="box-shadow: 0 4px 20px rgba(0,0,0,0.12); border-radius: 8px;">
+          <!-- Populated dynamically by PDFWhatsApp.renderPrintableInvoice -->
+        </div>
+
+        <!-- Payments Ledger Section -->
+        <div class="card" style="margin-top: 1.5rem;">
+          <div class="card-header">
+            <h4>Payment History & Transactions</h4>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="inv-view-payments-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. RECORD PAYMENT MODAL -->
+  <div id="modal-record-payment" class="modal-overlay">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>Record Payment</h3>
+        <button class="modal-close" onclick="App.closeModal('modal-record-payment')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="payment-invoice-id" value="" />
+        
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.825rem; color: #64748b; margin-bottom: 0.25rem;">Invoice Number</div>
+          <strong id="payment-modal-inv-num" style="font-size: 1.15rem; color: #4f46e5;">INV-0000</strong>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; font-size: 0.85rem;">
+            <span>Grand Total: <strong id="payment-modal-grandtotal">$0.00</strong></span>
+            <span>Total Paid: <strong id="payment-modal-paid" style="color: #10b981;">$0.00</strong></span>
+            <span>Balance: <strong id="payment-modal-balance" style="color: #ef4444;">$0.00</strong></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Payment Amount <span class="req">*</span></label>
+          <input type="number" id="payment-amount-input" class="form-control" step="0.01" min="0.01" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Payment Date <span class="req">*</span></label>
+          <input type="date" id="payment-date-input" class="form-control" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Payment Method</label>
+          <select id="payment-method-input" class="form-control">
+            <option value="Bank Transfer">Bank Transfer / Wire</option>
+            <option value="Credit Card">Credit / Debit Card</option>
+            <option value="Cash">Cash</option>
+            <option value="UPI / QR">UPI / Digital QR</option>
+            <option value="PayPal">PayPal</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reference / Notes</label>
+          <input type="text" id="payment-notes-input" class="form-control" placeholder="e.g. Transaction ID, Check #, Partial deposit" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-record-payment')">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="Invoices.submitPayment()">
+          <i class="fa-solid fa-check"></i> Submit Payment
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. WHATSAPP SHARE MODAL -->
+  <div id="modal-whatsapp-share" class="modal-overlay">
+    <div class="modal-container" style="max-width: 580px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fa-brands fa-whatsapp" style="color: #25d366; font-size: 1.35rem;"></i>
+          <h3 style="margin: 0;">Send Invoice to WhatsApp</h3>
+        </div>
+        <button class="modal-close" onclick="App.closeModal('modal-whatsapp-share')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Recipient WhatsApp Number (with country code) <span class="req">*</span></label>
+          <input type="text" id="whatsapp-phone-input" class="form-control" placeholder="e.g. 15551234567 (no spaces or plus sign)" />
+          <small style="color: #64748b; font-size: 0.775rem;">Example: for US (+1) 555-0199 enter <code>15550199</code></small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Message Preview & Customization</label>
+          <div class="whatsapp-preview-box">
+            <div id="whatsapp-preview-content" class="whatsapp-bubble"></div>
+          </div>
+          <textarea id="whatsapp-message-input" class="form-control" rows="5" oninput="document.getElementById('whatsapp-preview-content').textContent = this.value"></textarea>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem; font-size: 0.825rem; color: #166534; display: flex; align-items: flex-start; gap: 0.6rem;">
+          <i class="fa-solid fa-lightbulb" style="font-size: 1.1rem; margin-top: 2px;"></i>
+          <div>
+            <strong>Tip:</strong> Clicking "Send to WhatsApp" will open WhatsApp Web or the WhatsApp Mobile App with the full pre-filled invoice message. You can also download the PDF and drag it directly into the chat!
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-whatsapp-share')">Cancel</button>
+        <button type="button" id="btn-send-whatsapp-direct" class="btn btn-whatsapp" onclick="PDFWhatsApp.triggerWhatsAppSend()">
+          <i class="fa-brands fa-whatsapp"></i> Send to WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. CUSTOMER MODAL -->
+  <div id="modal-customer" class="modal-overlay">
+    <div class="modal-container" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="modal-customer-title">Add Customer</h3>
+        <button class="modal-close" onclick="App.closeModal('modal-customer')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-customer" onsubmit="event.preventDefault(); Customers.save();">
+          <input type="hidden" id="cust-id" value="" />
+          <div class="form-group">
+            <label class="form-label">Customer / Contact Name <span class="req">*</span></label>
+            <input type="text" id="cust-name" class="form-control" placeholder="e.g. John Doe" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company Name</label>
+            <input type="text" id="cust-company" class="form-control" placeholder="e.g. Acme Corp" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="cust-email" class="form-control" placeholder="john@example.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone / WhatsApp</label>
+              <input type="text" id="cust-phone" class="form-control" placeholder="+1 (555) 012-3456" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Billing Address</label>
+            <textarea id="cust-address" class="form-control" rows="2" placeholder="Full address"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tax ID / VAT Number</label>
+            <input type="text" id="cust-tax-id" class="form-control" placeholder="Optional tax registration #" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-customer')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="Customers.save()">
+          <i class="fa-solid fa-floppy-disk"></i> Save Customer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. PRODUCT MODAL -->
+  <div id="modal-product" class="modal-overlay">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="modal-product-title">Add Product / Service</h3>
+        <button class="modal-close" onclick="App.closeModal('modal-product')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-product" onsubmit="event.preventDefault(); Products.save();">
+          <input type="hidden" id="prod-id" value="" />
+          <div class="form-group">
+            <label class="form-label">Product / Service Name <span class="req">*</span></label>
+            <input type="text" id="prod-name" class="form-control" placeholder="e.g. Website Consulting" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">SKU / Code</label>
+              <input type="text" id="prod-sku" class="form-control" placeholder="e.g. SRV-01" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Unit of Measure</label>
+              <input type="text" id="prod-unit" class="form-control" placeholder="hrs, pcs, project" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Unit Price <span class="req">*</span></label>
+              <input type="number" id="prod-price" class="form-control" min="0" step="0.01" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Default Tax Rate (%)</label>
+              <input type="number" id="prod-tax-rate" class="form-control" min="0" max="100" step="0.1" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="prod-description" class="form-control" rows="2" placeholder="Description of the item or deliverable"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-product')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="Products.save()">
+          <i class="fa-solid fa-floppy-disk"></i> Save Product
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. FIREBASE REALTIME DATABASE CONFIGURATION MODAL -->
+  <div id="modal-firebase-config" class="modal-overlay">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <i class="fa-solid fa-fire" style="color: #f59e0b; font-size: 1.35rem;"></i>
+          <h3 style="margin: 0;">Firebase Realtime Database Setup</h3>
+        </div>
+        <button class="modal-close" onclick="App.closeModal('modal-firebase-config')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+          Connect your free Firebase Realtime Database to sync invoices, clients, and payments across your devices in real-time. (If left blank, InvoicePro runs seamlessly in high-speed LocalStorage mode).
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Database URL <span class="req">*</span></label>
+          <input type="text" id="fb-database-url" class="form-control" placeholder="https://your-project-default-rtdb.firebaseio.com" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">API Key <span class="req">*</span></label>
+            <input type="text" id="fb-api-key" class="form-control" placeholder="AIzaSy..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Project ID</label>
+            <input type="text" id="fb-project-id" class="form-control" placeholder="your-project-id" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Auth Domain</label>
+            <input type="text" id="fb-auth-domain" class="form-control" placeholder="your-project.firebaseapp.com" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">App ID</label>
+            <input type="text" id="fb-app-id" class="form-control" placeholder="1:123456789:web:abcdef" />
+          </div>
+        </div>
+
+        <div id="fb-test-status" style="margin-top: 0.5rem; min-height: 24px; font-size: 0.85rem;"></div>
+
+        <!-- Bandwidth Shield & Rate-Limit Prevention Card -->
+        <div class="card" style="margin-top: 1rem; margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong style="font-size: 0.85rem;"><i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> Bandwidth Saver & Quota Shield</strong>
+            <span id="modal-bandwidth-badge" class="badge" style="background: #ecfdf5; color: #065f46; font-size: 0.725rem;">Active & Optimized</span>
+          </div>
+          <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem;">
+            To prevent exhausting Firebase's free Spark download limit (~360 MB/day), InvoicePro uses <strong>Delta Child Sync</strong> (only updated items are sent, not whole collections) and compresses images.
+          </p>
+          <div style="display: flex; justify-content: space-between; font-size: 0.775rem; font-weight: 600; margin-bottom: 0.35rem;">
+            <span>Estimated Usage Today:</span>
+            <span id="modal-bandwidth-text">0.01 MB / 360 MB (0.01%)</span>
+          </div>
+          <div style="background: #e2e8f0; height: 6px; border-radius: 999px; overflow: hidden; margin-bottom: 0.85rem;">
+            <div id="modal-bandwidth-bar" style="background: #10b981; height: 100%; width: 0.1%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.775rem; color: #475569; font-weight: 600;">Sync Mode:</span>
+              <select id="fb-sync-mode" class="form-control" style="width: auto; padding: 0.25rem 0.5rem; font-size: 0.8rem;" onchange="App.setSyncMode(this.value)">
+                <option value="delta">Delta Child Sync (Ultra-Saver: &lt; 5 MB/day)</option>
+                <option value="manual">Manual / On-Demand (Zero Background Bandwidth)</option>
+                <option value="realtime">Full Realtime Stream</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="App.syncNow()" title="Fetch latest cloud updates manually">
+              <i class="fa-solid fa-rotate"></i> Sync Now
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 0.8rem; color: #475569;">
+          <strong>Quick Setup Guide:</strong>
+          <ol style="margin-left: 1.25rem; margin-top: 0.35rem; line-height: 1.6;">
+            <li>Go to <a href="https://console.firebase.google.com" target="_blank" style="color: #4f46e5;">console.firebase.google.com</a> and create a project.</li>
+            <li>Add a <strong>Web App</strong> to get your config object.</li>
+            <li>In the left menu, click <strong>Build &gt; Realtime Database</strong> &gt; <strong>Create Database</strong>.</li>
+            <li>Under <strong>Rules</strong>, set <code>".read": true, ".write": true</code> (or with your auth rules).</li>
+          </ol>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.testFirebaseConnection()">
+          <i class="fa-solid fa-vial"></i> Test Connection
+        </button>
+        <button type="button" class="btn btn-primary" onclick="App.saveFirebaseConfig()">
+          <i class="fa-solid fa-plug"></i> Save & Connect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Container for High-Fidelity Physical Printing & Print Dialog -->
+  <div id="print-section"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ==================== SCRIPTS ==================== -->
+  <!-- Firebase SDK (Compat CDN v10 for zero-build direct browser execution) -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
+  
+  <!-- html2pdf.js Bundle for Client-Side PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- App Core Modules -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/pdf-whatsapp.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/invoices.js"></script>
+  <script src="js/customers.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
